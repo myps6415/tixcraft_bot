@@ -2769,15 +2769,15 @@ def check_maxbot_config_unsaved(config_dict):
             #print(exc)
             pass
 
-def settgins_gui_timer():
-    while True:
-        #btn_preview_text_clicked()
-        preview_question_text_file()
-        update_maxbot_runtime_status()
-        change_maxbot_status_by_keyword()
-        time.sleep(0.4)
-        if GLOBAL_SERVER_SHUTDOWN:
-            break
+def settgins_gui_timer(root):
+    # run on Tk main thread via root.after(), Tk widgets are not thread-safe (segfault on macOS).
+    if GLOBAL_SERVER_SHUTDOWN:
+        return
+    #btn_preview_text_clicked()
+    preview_question_text_file()
+    update_maxbot_runtime_status()
+    change_maxbot_status_by_keyword()
+    root.after(400, settgins_gui_timer, root)
 
 def clean_extension_status():
     Root_Dir = util.get_app_root()
@@ -3185,6 +3185,7 @@ def main_gui():
         root.call('wm', 'iconphoto', root._w, logo)
     os.remove(icon_filepath)
 
+    root.after(400, settgins_gui_timer, root)
     root.mainloop()
     GLOBAL_SERVER_SHUTDOWN=True
     clean_extension_status()
@@ -3348,7 +3349,6 @@ def preview_question_text_file():
                     pass
 
 if __name__ == "__main__":
-    threading.Thread(target=settgins_gui_timer, daemon=True).start()
     threading.Thread(target=web_server, daemon=True).start()
     clean_tmp_file()
     main_gui()

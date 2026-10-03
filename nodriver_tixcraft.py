@@ -2043,7 +2043,7 @@ async def nodrver_block_urls(tab, config_dict):
 
     await tab.send(cdp.network.enable())
     # set_blocked_ur_ls is author's typo..., waiting author to chagne.
-    await tab.send(cdp.network.set_blocked_ur_ls(NETWORK_BLOCKED_URLS))
+    await tab.send(cdp.network.set_blocked_ur_ls(urls=NETWORK_BLOCKED_URLS))
     return tab
 
 async def nodriver_resize_window(tab, config_dict):
