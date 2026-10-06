@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# MaxBot runtime files
+MAXBOT_*.txt
+
+# downloaded webdriver binaries
+webdriver/chromedriver
+webdriver/chromedriver.exe
+webdriver/geckodriver*
+webdriver/msedgedriver*
