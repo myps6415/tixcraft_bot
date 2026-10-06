@@ -253,7 +253,8 @@ def get_chrome_options(webdriver_path, config_dict):
         #chrome_options.add_argument('--headless')
         chrome_options.add_argument('--headless=new')
 
-    chrome_options.add_argument("--user-agent=%s" % (USER_AGENT))
+    # use real user-agent, fake one mismatch with client hints and blocked by cloudflare.
+    #chrome_options.add_argument("--user-agent=%s" % (USER_AGENT))
     chrome_options.add_argument("--disable-animations")
     chrome_options.add_argument("--disable-background-networking")
     chrome_options.add_argument("--disable-backgrounding-occluded-windows")
@@ -334,6 +335,7 @@ def load_chromdriver_normal(config_dict, driver_type):
         print("請下在面的網址下載與你chrome瀏覽器相同版本的chromedriver,解壓縮後放到webdriver目錄裡：")
         print(CONST_CHROME_DRIVER_WEBSITE)
     else:
+        util.fix_macos_chromedriver_signature(chromedriver_path)
         chrome_service = Service(chromedriver_path)
         chrome_options = get_chrome_options(webdriver_path, config_dict)
         try:
@@ -356,6 +358,7 @@ def load_chromdriver_normal(config_dict, driver_type):
                     pass
 
                 chromedriver_autoinstaller_max.install(path=webdriver_path, make_version_dir=False)
+                util.fix_macos_chromedriver_signature(chromedriver_path)
                 chrome_service = Service(chromedriver_path)
                 try:
                     chrome_options = get_chrome_options(webdriver_path, config_dict)
@@ -412,7 +415,8 @@ def get_uc_options(uc, config_dict, webdriver_path):
         #options.add_argument('--headless')
         options.add_argument('--headless=new')
 
-    options.add_argument("--user-agent=%s" % (USER_AGENT))
+    # use real user-agent, fake one mismatch with client hints and blocked by cloudflare.
+    #options.add_argument("--user-agent=%s" % (USER_AGENT))
     options.add_argument("--disable-animations")
     options.add_argument("--disable-background-networking")
     options.add_argument("--disable-backgrounding-occluded-windows")
@@ -464,6 +468,18 @@ def get_uc_options(uc, config_dict, webdriver_path):
 
     return options
 
+def is_macos_arm64():
+    return "macos" in platform.platform().lower() and "arm64" in platform.platform().lower()
+
+def prepare_uc_chromedriver(uc, chromedriver_path):
+    # on macOS, patch binary before launch then re-sign, or the patched binary will be killed by system.
+    if sys.platform.endswith("darwin"):
+        try:
+            uc.Patcher(executable_path=chromedriver_path).auto()
+        except Exception as exc:
+            print(exc)
+        util.fix_macos_chromedriver_signature(chromedriver_path)
+
 def load_chromdriver_uc(config_dict):
     import undetected_chromedriver as uc
 
@@ -499,12 +515,10 @@ def load_chromdriver_uc(config_dict):
 
         fail_1 = False
         lanch_uc_with_path = True
-        if "macos" in platform.platform().lower():
-            if "arm64" in platform.platform().lower():
-                lanch_uc_with_path = False
 
         if lanch_uc_with_path:
             try:
+                prepare_uc_chromedriver(uc, chromedriver_path)
                 options = get_uc_options(uc, config_dict, webdriver_path)
                 driver = uc.Chrome(driver_executable_path=chromedriver_path, options=options, headless=config_dict["advanced"]["headless"])
             except Exception as exc:
@@ -523,7 +537,10 @@ def load_chromdriver_uc(config_dict):
             fail_1 = True
 
         fail_2 = False
-        if fail_1:
+        if fail_1 and is_macos_arm64():
+            # uc auto download only x64 chromedriver on macOS.
+            fail_2 = True
+        elif fail_1:
             try:
                 options = get_uc_options(uc, config_dict, webdriver_path)
                 driver = uc.Chrome(options=options)
@@ -542,6 +559,7 @@ def load_chromdriver_uc(config_dict):
 
             try:
                 chromedriver_autoinstaller_max.install(path=webdriver_path, make_version_dir=False)
+                prepare_uc_chromedriver(uc, chromedriver_path)
                 options = get_uc_options(uc, config_dict, webdriver_path)
                 driver = uc.Chrome(driver_executable_path=chromedriver_path, options=options)
             except Exception as exc2:
@@ -550,7 +568,7 @@ def load_chromdriver_uc(config_dict):
     else:
         print("WebDriver not found at path:", chromedriver_path)
 
-    if driver is None:
+    if driver is None and not is_macos_arm64():
         print('WebDriver object is still None..., try download by uc.')
         try:
             options = get_uc_options(uc, config_dict, webdriver_path)

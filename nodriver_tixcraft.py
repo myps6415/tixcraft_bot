@@ -1904,7 +1904,8 @@ async def nodriver_facebook_main(tab, config_dict):
 
 def get_nodriver_browser_args():
     browser_args = [
-        "--user-agent=%s" % (USER_AGENT),
+        # use real user-agent, fake one mismatch with client hints and blocked by cloudflare.
+        #"--user-agent=%s" % (USER_AGENT),
         "--disable-2d-canvas-clip-aa",
         "--disable-3d-apis",
         "--disable-animations",

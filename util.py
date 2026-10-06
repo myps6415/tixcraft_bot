@@ -284,6 +284,20 @@ def clean_uc_exe_cache():
 
     return is_cache_exist
 
+def fix_macos_chromedriver_signature(chromedriver_path):
+    # macOS kills binaries with an invalid code signature (e.g. after being patched), re-sign ad-hoc.
+    if not sys.platform.endswith("darwin"):
+        return
+    if not os.path.exists(chromedriver_path):
+        return
+    try:
+        ret = subprocess.run(["codesign", "--verify", chromedriver_path], capture_output=True)
+        if ret.returncode != 0:
+            print("ChromeDriver signature invalid, re-sign:", chromedriver_path)
+            subprocess.run(["codesign", "--force", "--sign", "-", chromedriver_path], capture_output=True)
+    except Exception as exc:
+        print(exc)
+
 def t_or_f(arg):
     ret = False
     ua = str(arg).upper()
